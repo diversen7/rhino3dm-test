@@ -1,5 +1,13 @@
 # rhino3dm-test
 
+## Install
+
+```
+git clone https://github.com/diversen7/rhino3dm-test.git
+cd rhino3dm-test
+uv sync
+```
+
 ## extract_3dm_curves_to_svg.py
 
 Extracts curve objects from a Rhino `.3dm` file and writes a top-view SVG. Curves are grouped by layer and scaled to fit the output canvas. 
