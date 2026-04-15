@@ -240,6 +240,12 @@ def write_svg(
     tree.write(out_path, encoding="utf-8", xml_declaration=True)
 
 
+def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
+    resolved = output_path or input_path.with_name(f"{input_path.stem}_curves_breps.svg")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    return resolved
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Extract top-view SVG from Rhino .3dm curve objects and Brep edges"
@@ -250,7 +256,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Output .svg file (default: same name as input with _curves_breps.svg)",
+        help="Output .svg filename or path (default: same name as input with _curves_breps.svg)",
     )
     parser.add_argument("--width", type=int, default=1600, help="SVG width in px")
     parser.add_argument("--height", type=int, default=1200, help="SVG height in px")
@@ -285,7 +291,7 @@ def main() -> int:
         print(f"Input file not found: {input_path}", file=sys.stderr)
         return 1
 
-    output_path = args.output or input_path.with_name(f"{input_path.stem}_curves_breps.svg")
+    output_path = resolve_output_path(input_path, args.output)
 
     model = rhino3dm.File3dm.Read(str(input_path))
     if model is None:

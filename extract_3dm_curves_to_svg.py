@@ -208,6 +208,12 @@ def write_svg(
     tree.write(out_path, encoding="utf-8", xml_declaration=True)
 
 
+def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
+    resolved = output_path or input_path.with_suffix(".svg")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    return resolved
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Extract top-view SVG from curve objects in a Rhino .3dm file"
@@ -218,7 +224,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Output .svg file (default: same name as input)",
+        help="Output .svg filename or path (default: same name as input)",
     )
     parser.add_argument("--width", type=int, default=1600, help="SVG width in px")
     parser.add_argument("--height", type=int, default=1200, help="SVG height in px")
@@ -243,7 +249,7 @@ def main() -> int:
         print(f"Input file not found: {input_path}", file=sys.stderr)
         return 1
 
-    output_path = args.output or input_path.with_suffix(".svg")
+    output_path = resolve_output_path(input_path, args.output)
 
     model = rhino3dm.File3dm.Read(str(input_path))
     if model is None:

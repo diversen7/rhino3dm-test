@@ -217,6 +217,12 @@ def write_obj(mesh_records, out_path: Path):
     out_path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
+    resolved = output_path or input_path.with_suffix(".obj")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    return resolved
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Try to extract a mesh-style 3D model from a Rhino .3dm file and export OBJ"
@@ -227,7 +233,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Output .obj file (default: same name as input)",
+        help="Output .obj filename or path (default: same name as input)",
     )
     parser.add_argument(
         "--layer",
@@ -253,7 +259,7 @@ def main() -> int:
         print(f"Input file not found: {input_path}", file=sys.stderr)
         return 1
 
-    output_path = args.output or input_path.with_suffix(".obj")
+    output_path = resolve_output_path(input_path, args.output)
 
     model = rhino3dm.File3dm.Read(str(input_path))
     if model is None:
