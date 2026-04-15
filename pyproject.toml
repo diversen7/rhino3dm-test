@@ -1,0 +1,9 @@
+[project]
+name = "rhino"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "rhino3dm>=8.17.0",
+]
