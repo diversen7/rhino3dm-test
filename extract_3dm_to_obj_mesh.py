@@ -44,7 +44,7 @@ def append_mesh_record(records, mesh, name: str, layer: str, source: str):
         return
     records.append(
         {
-            "mesh": mesh,
+            "meshes": [mesh],
             "name": safe_name(name, "mesh"),
             "layer": safe_name(layer, "Default"),
             "source": source,
@@ -53,7 +53,7 @@ def append_mesh_record(records, mesh, name: str, layer: str, source: str):
 
 
 def try_get_meshes_from_brep(brep, base_name: str, layer_name: str):
-    records = []
+    meshes = []
     mesh_types = [
         rhino3dm.MeshType.Any,
         rhino3dm.MeshType.Render,
@@ -66,7 +66,7 @@ def try_get_meshes_from_brep(brep, base_name: str, layer_name: str):
     try:
         face_count = len(brep.Faces)
     except Exception:
-        return records
+        return []
 
     for face_index in range(face_count):
         try:
@@ -88,16 +88,20 @@ def try_get_meshes_from_brep(brep, base_name: str, layer_name: str):
                 continue
             seen.add(key)
 
-            append_mesh_record(
-                records,
-                mesh,
-                f"{base_name}_face_{face_index}_{mt.name.lower()}",
-                layer_name,
-                f"brep_face:{mt.name}",
-            )
+            meshes.append(mesh)
             break
 
-    return records
+    if not meshes:
+        return []
+
+    return [
+        {
+            "meshes": meshes,
+            "name": safe_name(base_name, "mesh"),
+            "layer": safe_name(layer_name, "Default"),
+            "source": "brep_faces",
+        }
+    ]
 
 
 def try_get_meshes_from_extrusion(extrusion, base_name: str, layer_name: str):
@@ -128,7 +132,7 @@ def try_get_meshes_from_extrusion(extrusion, base_name: str, layer_name: str):
     return records
 
 
-def write_obj(mesh_records, out_path: Path):
+def write_obj(mesh_records, out_path: Path, triangulate: bool = False):
     def face_indices(face):
         """
         Return 0-based vertex indices as a list.
@@ -163,7 +167,7 @@ def write_obj(mesh_records, out_path: Path):
     lines.append("")
 
     for rec in mesh_records:
-        mesh = rec["mesh"]
+        meshes = rec["meshes"]
         obj_name = rec["name"]
         layer_name = rec["layer"]
         source = rec["source"]
@@ -172,47 +176,51 @@ def write_obj(mesh_records, out_path: Path):
         lines.append(f"g {layer_name}")
         lines.append(f"# source: {source}")
 
-        # vertices
-        for v in mesh.Vertices:
-            lines.append(f"v {v.X:.9f} {v.Y:.9f} {v.Z:.9f}")
+        for mesh in meshes:
+            # vertices
+            for v in mesh.Vertices:
+                lines.append(f"v {v.X:.9f} {v.Y:.9f} {v.Z:.9f}")
 
-        # normals, if present
-        has_normals = False
-        try:
-            has_normals = len(mesh.Normals) == len(mesh.Vertices) and len(mesh.Normals) > 0
-        except Exception:
+            # normals, if present
             has_normals = False
-
-        if has_normals:
-            for n in mesh.Normals:
-                lines.append(f"vn {n.X:.9f} {n.Y:.9f} {n.Z:.9f}")
-
-        # faces
-        for f in mesh.Faces:
-            idx = face_indices(f)
-            idx = [i + 1 + vertex_offset for i in idx]
+            try:
+                has_normals = len(mesh.Normals) == len(mesh.Vertices) and len(mesh.Normals) > 0
+            except Exception:
+                has_normals = False
 
             if has_normals:
-                # Use the same index for v and vn because normals are per-vertex here
-                idxn = [i + normal_offset for i in range(1, len(idx) + 1)]
-                if len(idx) == 3:
-                    lines.append(
-                        f"f {idx[0]}//{idxn[0]} {idx[1]}//{idxn[1]} {idx[2]}//{idxn[2]}"
-                    )
-                elif len(idx) == 4:
-                    lines.append(
-                        f"f {idx[0]}//{idxn[0]} {idx[1]}//{idxn[1]} {idx[2]}//{idxn[2]} {idx[3]}//{idxn[3]}"
-                    )
-            else:
-                if len(idx) == 3:
-                    lines.append(f"f {idx[0]} {idx[1]} {idx[2]}")
-                elif len(idx) == 4:
-                    lines.append(f"f {idx[0]} {idx[1]} {idx[2]} {idx[3]}")
+                for n in mesh.Normals:
+                    lines.append(f"vn {n.X:.9f} {n.Y:.9f} {n.Z:.9f}")
+
+            # faces
+            for f in mesh.Faces:
+                idx = face_indices(f)
+                idx = [i + 1 + vertex_offset for i in idx]
+
+                face_sets = [idx]
+                if triangulate and len(idx) == 4:
+                    face_sets = [
+                        [idx[0], idx[1], idx[2]],
+                        [idx[0], idx[2], idx[3]],
+                    ]
+
+                for current_idx in face_sets:
+                    if has_normals:
+                        current_idxn = [vertex_index - vertex_offset + normal_offset for vertex_index in current_idx]
+                        lines.append(
+                            "f " + " ".join(
+                                f"{vertex_index}//{normal_index}"
+                                for vertex_index, normal_index in zip(current_idx, current_idxn)
+                            )
+                        )
+                    else:
+                        lines.append("f " + " ".join(str(vertex_index) for vertex_index in current_idx))
+
+            vertex_offset += len(mesh.Vertices)
+            if has_normals:
+                normal_offset += len(mesh.Normals)
 
         lines.append("")
-        vertex_offset += len(mesh.Vertices)
-        if has_normals:
-            normal_offset += len(mesh.Normals)
 
     out_path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -258,6 +266,11 @@ def main() -> int:
         "--no-extrusion-meshes",
         action="store_true",
         help="Do not try to extract cached meshes from Extrusion objects",
+    )
+    parser.add_argument(
+        "--triangulate",
+        action="store_true",
+        help="Triangulate quad faces in the OBJ output for broader importer compatibility",
     )
 
     args = parser.parse_args()
@@ -324,10 +337,10 @@ def main() -> int:
         )
         return 2
 
-    write_obj(mesh_records, output_path)
+    write_obj(mesh_records, output_path, triangulate=args.triangulate)
 
-    total_vertices = sum(len(rec["mesh"].Vertices) for rec in mesh_records)
-    total_faces = sum(len(rec["mesh"].Faces) for rec in mesh_records)
+    total_vertices = sum(len(mesh.Vertices) for rec in mesh_records for mesh in rec["meshes"])
+    total_faces = sum(len(mesh.Faces) for rec in mesh_records for mesh in rec["meshes"])
 
     print(f"Wrote OBJ: {output_path}")
     print(f"Mesh records exported: {len(mesh_records)}")
