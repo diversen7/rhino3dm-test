@@ -36,7 +36,7 @@ Attempts to extract mesh geometry from Breps and extrusions in a Rhino `.3dm` fi
 extract_3dm_to_obj_mesh.py source_3dm/Epicycles.3dm -o output/
 ```
 
-View online. Upload both the `.obj` files:
+View online. Upload the `.obj` file:
 
 https://3dviewer.net/
 
@@ -48,6 +48,6 @@ Attempts to extract mesh geometry from a Rhino `.3dm` file and writes it as a gl
 extract_3dm_to_gltf.py source_3dm/Epicycles.3dm -o output/
 ```
 
-View online. Upload both the `.gltf` and `.bin` files:
+View online. Upload the `.gltf` and `.bin` files at the same time:
 
 https://3dviewer.net/
