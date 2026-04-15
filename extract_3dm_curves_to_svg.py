@@ -209,7 +209,15 @@ def write_svg(
 
 
 def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
-    resolved = output_path or input_path.with_suffix(".svg")
+    default_name = f"{input_path.stem}.svg"
+    if output_path is None:
+        resolved = Path.cwd() / default_name
+    elif output_path.exists() and output_path.is_dir():
+        resolved = output_path / default_name
+    elif output_path.suffix == "":
+        resolved = output_path / default_name
+    else:
+        resolved = output_path
     resolved.parent.mkdir(parents=True, exist_ok=True)
     return resolved
 
@@ -224,7 +232,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Output .svg filename or path (default: same name as input)",
+        help="Output .svg path, or directory for the default filename (default: CWD/input-stem.svg)",
     )
     parser.add_argument("--width", type=int, default=1600, help="SVG width in px")
     parser.add_argument("--height", type=int, default=1200, help="SVG height in px")
