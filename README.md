@@ -75,12 +75,11 @@ Generates a simple single-page HTML viewer for a `.glb` file using `model-viewer
 ./generate_model_viewer_html.py output/AaRW.glb
 ```
 
-This writes `output/AaRW.html`, which references the `.glb` with a relative path so the page and model can be moved together.
+This writes `pages/index.html` and copies the model to `pages/AaRW.glb`, so the example is self-contained for GitHub Pages.
 
 ```sh
-cd output
+cd pages
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000/AaRW.html`.
-
+Then open `http://localhost:8000/`.

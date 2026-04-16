@@ -4,16 +4,18 @@ from __future__ import annotations
 import argparse
 import html
 import os
+import shutil
 import sys
 from pathlib import Path
 
 MODEL_VIEWER_URL = "https://ajax.googleapis.com/ajax/libs/model-viewer/4.2.0/model-viewer.min.js"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "pages"
 
 
 def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
-    default_name = f"{input_path.stem}.html"
+    default_name = "index.html"
     if output_path is None:
-        resolved = input_path.with_suffix(".html")
+        resolved = DEFAULT_OUTPUT_DIR / default_name
     elif output_path.exists() and output_path.is_dir():
         resolved = output_path / default_name
     elif output_path.suffix == "":
@@ -22,6 +24,13 @@ def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
         resolved = output_path
     resolved.parent.mkdir(parents=True, exist_ok=True)
     return resolved
+
+
+def copy_model_to_output_dir(input_path: Path, html_path: Path) -> Path:
+    copied_model_path = html_path.parent / input_path.name
+    if input_path.resolve() != copied_model_path.resolve():
+        shutil.copy2(input_path, copied_model_path)
+    return copied_model_path
 
 
 def relative_model_path(model_path: Path, html_path: Path) -> str:
@@ -149,7 +158,7 @@ def main() -> int:
         "--output",
         type=Path,
         default=None,
-        help="Output .html path, or directory for the default filename (default: next to the .glb)",
+        help="Output .html path, or directory for the default filename (default: pages/index.html)",
     )
     parser.add_argument(
         "--title",
@@ -168,13 +177,15 @@ def main() -> int:
         return 1
 
     output_path = resolve_output_path(input_path, args.output)
-    model_src = relative_model_path(input_path, output_path)
+    copied_model_path = copy_model_to_output_dir(input_path, output_path)
+    model_src = relative_model_path(copied_model_path, output_path)
     title = args.title or input_path.stem
 
     html_text = build_html(title, model_src)
     output_path.write_text(html_text, encoding="utf-8")
 
     print(f"Wrote HTML viewer: {output_path}")
+    print(f"Copied model: {copied_model_path}")
     print(f"Model source: {model_src}")
     print("Note: open the HTML over http:// or https://, not file://", file=sys.stderr)
     print(
