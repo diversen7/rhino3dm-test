@@ -6,6 +6,7 @@
 git clone https://github.com/diversen7/rhino3dm-test.git
 cd rhino3dm-test
 uv sync
+source .venv/bin/activate
 ```
 
 ## extract_3dm_curves_to_svg.py
