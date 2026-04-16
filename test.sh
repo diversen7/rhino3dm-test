@@ -15,3 +15,4 @@ echo "Extracting data from $MODEL_3DM_FILE..."
 "$SCRIPT_DIR"/extract_3dm_curves_and_brep_edges_to_svg.py "$MODEL_3DM_FILE" -o "$SCRIPT_DIR"/output/
 "$SCRIPT_DIR"/extract_3dm_to_obj_mesh.py "$MODEL_3DM_FILE" -o "$SCRIPT_DIR"/output/
 "$SCRIPT_DIR"/extract_3dm_to_gltf.py "$MODEL_3DM_FILE" -o "$SCRIPT_DIR"/output/
+"$SCRIPT_DIR"/extract_3dm_to_stl.py "$MODEL_3DM_FILE" -o "$SCRIPT_DIR"/output/

@@ -403,6 +403,31 @@ def build_gltf(mesh_records):
     return gltf, bytes(binary_blob), len(nodes)
 
 
+def build_glb(gltf: dict, binary_blob: bytes) -> bytes:
+    gltf_for_glb = json.loads(json.dumps(gltf))
+    gltf_for_glb["buffers"][0].pop("uri", None)
+
+    json_chunk = json.dumps(gltf_for_glb, separators=(",", ":")).encode("utf-8")
+    while len(json_chunk) % 4 != 0:
+        json_chunk += b" "
+
+    bin_chunk = binary_blob
+    while len(bin_chunk) % 4 != 0:
+        bin_chunk += b"\x00"
+
+    total_length = 12 + 8 + len(json_chunk) + 8 + len(bin_chunk)
+
+    return b"".join(
+        [
+            struct.pack("<4sII", b"glTF", 2, total_length),
+            struct.pack("<I4s", len(json_chunk), b"JSON"),
+            json_chunk,
+            struct.pack("<I4s", len(bin_chunk), b"BIN\x00"),
+            bin_chunk,
+        ]
+    )
+
+
 def resolve_output_path(input_path: Path, output_path: Path | None) -> Path:
     default_name = f"{input_path.stem}.gltf"
     if output_path is None:
@@ -531,15 +556,20 @@ def main() -> int:
         print("No valid glTF primitives could be created from the extracted meshes.", file=sys.stderr)
         return 3
 
+    glb_path = output_path.with_suffix(".glb")
+    glb_blob = build_glb(gltf, binary_blob)
+
     gltf["buffers"][0]["uri"] = bin_path.name
     output_path.write_text(json.dumps(gltf, indent=2), encoding="utf-8")
     bin_path.write_bytes(binary_blob)
+    glb_path.write_bytes(glb_blob)
 
     total_vertices = sum(len(mesh.Vertices) for rec in mesh_records for mesh in rec["meshes"])
     total_faces = sum(len(mesh.Faces) for rec in mesh_records for mesh in rec["meshes"])
 
     print(f"Wrote glTF: {output_path}")
     print(f"Wrote BIN: {bin_path}")
+    print(f"Wrote GLB: {glb_path}")
     print(f"Scene nodes exported: {node_count}")
     print(f"Mesh records exported: {len(mesh_records)}")
     print(f"Direct mesh objects: {direct_mesh_count}")
