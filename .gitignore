@@ -8,3 +8,5 @@ wheels/
 
 # Virtual environments
 .venv
+output
+source_3dm/AaRW.3dm
