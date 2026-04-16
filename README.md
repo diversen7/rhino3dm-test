@@ -52,3 +52,15 @@ Attempts to extract mesh geometry from a Rhino `.3dm` file and writes it as a gl
 View online. Upload the `.gltf` and `.bin` files at the same time:
 
 https://3dviewer.net/
+
+## extract_3dm_to_stl.py
+
+Attempts to extract mesh geometry from a Rhino `.3dm` file and writes it as a binary STL. Quad faces are triangulated automatically.
+
+```sh
+./extract_3dm_to_stl.py source_3dm/Epicycles.3dm -o output/
+```
+
+View online. Upload the `.stl` file:
+
+https://3dviewer.net/
