@@ -53,6 +53,8 @@ View online. Upload the `.gltf` and `.bin` files at the same time:
 
 https://3dviewer.net/
 
+The exporter also writes a `.glb`, which can be used directly with the HTML generator below.
+
 ## extract_3dm_to_stl.py
 
 Attempts to extract mesh geometry from a Rhino `.3dm` file and writes it as a binary STL. Quad faces are triangulated automatically.
@@ -64,3 +66,21 @@ Attempts to extract mesh geometry from a Rhino `.3dm` file and writes it as a bi
 View online. Upload the `.stl` file:
 
 https://3dviewer.net/
+
+## generate_model_viewer_html.py
+
+Generates a simple single-page HTML viewer for a `.glb` file using `model-viewer`.
+
+```sh
+./generate_model_viewer_html.py output/AaRW.glb
+```
+
+This writes `output/AaRW.html`, which references the `.glb` with a relative path so the page and model can be moved together.
+
+```sh
+cd output
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/AaRW.html`.
+
